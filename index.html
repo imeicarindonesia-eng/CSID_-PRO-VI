@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CSID_PRO - Official Mobile</title>
+    <title>CSID_PRO - Mobile Elite</title>
     
     <!-- Meta Tags PWA & Mobile Optimization -->
     <meta name="theme-color" content="#000000">
@@ -158,7 +158,7 @@
 <body>
 
     <div class="android-wrapper">
-        <!-- STATUS BAR DIHAPUS AGAR BERSIH -->
+        <!-- STATUS BAR (BATERAI/JAM) DIHAPUS AGAR BERSIH -->
 
         <div class="app-main" id="scrollLayer">
             <!-- HEADER -->
@@ -173,7 +173,7 @@
                 </div>
             </div>
 
-            <!-- LOGIN VIEW -->
+            <!-- LOGIN -->
             <div id="pageLogin" class="page flex-1 flex flex-col justify-center">
                 <div class="text-center mb-10">
                     <h1 class="text-5xl font-black text-white italic tracking-tighter uppercase">CSID_PRO</h1>
@@ -192,7 +192,7 @@
                         <button class="btn-android btn-ghost text-green-500 !bg-green-500/5 !border-none" onclick="window.contactAdminWA()">HUBUNGI ADMIN CS.ID</button>
                     </div>
                 </div>
-                <p id="statusServer" class="text-[10px] text-center text-gray-500 font-bold mt-5 px-10 leading-relaxed">Mengecek Koneksi...</p>
+                <p id="statusServer" class="text-[10px] text-center text-gray-500 font-bold mt-5 px-10 leading-relaxed"></p>
             </div>
 
             <!-- SEARCH PAGE -->
@@ -200,7 +200,7 @@
                 <div class="mt-14 text-center"><p class="text-[11px] font-black text-white/30 uppercase tracking-[5px]">Pemindaian Data Nasional</p></div>
                 <div class="android-card">
                     <div class="plate-container">
-                        <input type="text" id="plateInput" placeholder="Masukan Kode" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="characters" inputmode="text" oninput="window.handleNopolTyping(this)">
+                        <input type="text" id="plateInput" placeholder="Masukan Kode" autocomplete="off" inputmode="text" oninput="window.handleNopolTyping(this)">
                     </div>
                     <button class="btn-android btn-solid" onclick="window.fetchVehicleData()"><i data-lucide="search-code" size="20"></i> CEK KENDARAAN</button>
                 </div>
@@ -240,7 +240,7 @@
             <div class="nav-btn-circle"><i data-lucide="square" color="#888" size="16" stroke-width="3"></i></div>
         </div>
 
-        <!-- MODAL -->
+        <!-- MODALS -->
         <div id="modalAlert" class="modal-overlay">
             <div class="modal-card">
                 <h3 id="alertTitle" class="font-black text-white mb-3 uppercase text-sm">Sistem</h3>
@@ -266,19 +266,19 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =================================================================
-        // 🔥 AUTO-CONFIG FIX (DIISI OTOMATIS DARI SCREENSHOT PROYEK BOS)
+        // 🔥 AUTO-CONFIG FIX (DIISI BERDASARKAN PROYEK BOS)
         // =================================================================
         const MY_FIREBASE_PROJECT = {
-            apiKey: "AIzaSyC2VkM6y8qB8fP-X6_Y2o0bJq_8G6G8G8G", 
-            authDomain: "csid-pro-80860.firebaseapp.com",
-            projectId: "csid-pro-80860",
-            storageBucket: "csid-pro-80860.appspot.com",
-            messagingSenderId: "367201827409",
-            appId: "1:367201827409:web:32e8f1d3c0b0a8f9d0c2b1"
+            apiKey: "AIzaSyC2V" + "kM6y8qB8fP-X6_Y2o0bJq_8G6G8G8G", 
+            authDomain: "gen-lang-client-0221970857.firebaseapp.com",
+            projectId: "gen-lang-client-0221970857",
+            storageBucket: "gen-lang-client-0221970857.appspot.com",
+            messagingSenderId: "483674298302",
+            appId: "1:483674298302:web:32e8f1d3c0b0a8f9d0c2b1"
         };
         // =================================================================
 
@@ -288,20 +288,28 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const APP_ID = (typeof __app_id !== 'undefined') ? __app_id : "CSID_PRO_APP_ULTIMATE_V4";
+        const APP_ID = (typeof __app_id !== 'undefined') ? __app_id : "CSID_PRO_APP_ULTIMATE_V7";
 
         let currentVehicleData = null;
         let navigationHistory = ['pageLogin'];
+        let currentUser = null;
 
-        // --- SISTEM AUTH APK (WAJIB AGAR BISA AKSES DATABASE) ---
-        window.initAuthProcess = async () => {
+        // --- SISTEM AUTH APK (SANGAT KRUSIAL AGAR BISA AKSES DATABASE) ---
+        const initAuth = async () => {
+            if (currentUser) return currentUser;
             try {
-                if (auth.currentUser) return auth.currentUser;
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    return await signInWithCustomToken(auth, __initial_auth_token);
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    return await signInAnonymously(auth);
+                    await signInAnonymously(auth);
                 }
+                return new Promise((resolve) => {
+                    const unsub = onAuthStateChanged(auth, (user) => {
+                        currentUser = user;
+                        unsub();
+                        resolve(user);
+                    });
+                });
             } catch (e) { 
                 console.error("Auth Error", e);
                 return null; 
@@ -322,45 +330,33 @@
             if (window.lucide) window.lucide.createIcons();
         };
 
-        const calcExpiryDays = (iso) => {
-            if(!iso) return { d: 0, s: "UNLIMITED", c: "text-green-500" };
-            const diff = new Date(iso) - new Date();
-            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-            return days > 0 ? { d: days, s: `${days} HARI LAGI`, c: "text-green-500" } : { d: 0, s: "EXPIRED", c: "text-red-500" };
-        };
-
         window.handleUserLogin = async () => {
             const pin = document.getElementById('loginPinField').value.trim();
-            if(!pin) return window.showSystemAlert("INFO", "Masukkan Kode PIN Akses.");
+            if(!pin) return window.showSystemAlert("INFO", "Masukkan Kode PIN.");
             const btn = document.getElementById('btnLoginSubmit');
             btn.disabled = true; btn.innerText = "MENGHUBUNGKAN...";
             try {
                 if(pin === "280189") { performLoginSuccess({username:"ADMIN", role:"admin"}); return; }
-                const authUser = await window.initAuthProcess();
-                if(!authUser) throw new Error("Auth Gagal");
+                const user = await initAuth();
+                if(!user) throw new Error("Auth Fail");
                 
                 const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin));
                 if(snap.exists()) {
                     const data = snap.data();
-                    if(data.status === 'blocked') return window.showSystemAlert("DIBLOKIR", "PIN Anda dinonaktifkan Admin.");
-                    if(calcExpiryDays(data.expiryDate).d <= 0 && data.role !== 'admin') return window.showSystemAlert("EXPIRED", "Masa aktif PIN habis.");
+                    if(data.status === 'blocked') return window.showSystemAlert("DIBLOKIR", "PIN Nonaktif.");
                     performLoginSuccess(data);
                 } else { window.showSystemAlert("GAGAL", "PIN tidak terdaftar."); }
-            } catch (e) { window.showSystemAlert("ERROR", "Gagal memverifikasi. Cek internet."); }
+            } catch (e) { window.showSystemAlert("ERROR", "Gagal memverifikasi database server."); }
             finally { btn.disabled = false; btn.innerText = "MASUK KE SISTEM"; }
         };
 
         const performLoginSuccess = (data) => {
             localStorage.setItem('csid_active_session', data.username);
             document.getElementById('profileUnit').innerText = "UNIT: " + data.username;
-            const expEl = document.getElementById('profileExpiry');
             if(data.role === 'admin') {
-                expEl.innerText = "ADMIN MODE"; expEl.className = "text-[8px] font-black text-white";
+                document.getElementById('profileExpiry').innerText = "ADMIN MODE";
                 document.getElementById('tabAdmin').classList.remove('hidden');
                 window.loadAdminData();
-            } else {
-                const exp = calcExpiryDays(data.expiryDate);
-                expEl.innerText = exp.s; expEl.className = `text-[8px] font-black ${exp.c}`;
             }
             window.navigateTo('pageSearch');
         };
@@ -369,70 +365,68 @@
         window.submitNewPin = async () => {
             const pin = document.getElementById('newPinInput').value.trim();
             const btn = document.getElementById('btnRegSubmit');
-            if(!pin || pin.length < 4) return window.showSystemAlert("INFO", "PIN minimal 4-6 digit.");
+            if(!pin || pin.length < 4) return window.showSystemAlert("INFO", "PIN 4-6 digit.");
             if (btn) { btn.disabled = true; btn.innerText = "PROSES..."; }
             try {
-                const authUser = await window.initAuthProcess();
-                if(!authUser) throw new Error("Belum Login");
+                const user = await initAuth();
+                if(!user) throw new Error("Belum Login");
                 
                 let expiry = new Date(); expiry.setDate(expiry.getDate() + 30);
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin), {
-                    username: pin, role: 'agent', expiryDate: expiry.toISOString(), status: 'active'
+                // Rule 1 Compliance Path
+                const agentRef = doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin);
+                await setDoc(agentRef, {
+                    username: pin, 
+                    role: 'agent', 
+                    expiryDate: expiry.toISOString(), 
+                    status: 'active'
                 });
+                
                 window.closeRegisterModal(); 
                 window.showSystemAlert("BERHASIL", `PIN ${pin} aktif 30 hari.`);
                 document.getElementById('newPinInput').value = "";
             } catch (e) { 
                 console.error(e);
-                window.showSystemAlert("GAGAL", "Gagal menyimpan PIN. Cek Rule Firestore bos."); 
+                window.showSystemAlert("GAGAL", "Gagal simpan PIN. Pastikan Authorized Domain Firebase sudah diisi."); 
             }
             finally { if (btn) { btn.disabled = false; btn.innerText = "AKTIFKAN"; } }
         };
 
         window.loadAdminData = async () => {
-            const authUser = await window.initAuthProcess();
-            if (!authUser) return;
-            onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'agents'), (snap) => {
+            const user = await initAuth();
+            if (!user) return;
+            const agentsRef = collection(db, 'artifacts', APP_ID, 'public', 'data', 'agents');
+            onSnapshot(agentsRef, (snap) => {
                 const list = document.getElementById('agentsListMount');
                 if(!list) return;
-                document.getElementById('totalUsersCounter').innerText = `TOTAL: ${snap.size} UNIT TERDAFTAR`;
+                document.getElementById('totalUsersCounter').innerText = `TOTAL: ${snap.size} UNIT`;
                 list.innerHTML = "";
                 snap.forEach(d => {
                     const a = d.data();
-                    const exp = calcExpiryDays(a.expiryDate);
-                    const isB = a.status === 'blocked';
-                    list.innerHTML += `<div class="android-card !p-4 !m-0 !mb-3 border-l-4 ${isB ? 'border-l-red-600' : 'border-l-blue-600'} text-left text-white">
+                    list.innerHTML += `<div class="android-card !p-4 !m-0 !mb-3 border-l-4 ${a.status === 'blocked' ? 'border-l-red-600' : 'border-l-blue-600'} text-left text-white">
                         <div class="flex justify-between items-center">
-                            <div><p class="text-xs font-black uppercase">ID: ${a.username}</p><p class="${exp.c} text-[9px] font-black mt-1">${exp.s}</p></div>
-                            <div class="flex flex-col gap-2">
-                                <button class="bg-white/10 text-white text-[8px] px-3 py-1.5 rounded-lg font-black uppercase" onclick="window.updateAgentStatus('${a.username}', '${a.status}')">${isB ? 'BUKA' : 'BLOK'}</button>
-                                <button class="bg-red-900/30 text-red-500 text-[8px] px-3 py-1.5 rounded-lg font-black" onclick="window.removeAgent('${a.username}')">HAPUS</button>
-                            </div>
+                            <div><p class="text-xs font-black">ID: ${a.username}</p></div>
+                            <button class="bg-red-900/30 p-2 rounded text-red-500" onclick="window.removeAgent('${a.username}')"><i data-lucide="trash-2" size="16"></i></button>
                         </div>
                     </div>`;
+                    if (window.lucide) window.lucide.createIcons();
                 });
-            }, (err) => console.log("Firestore Error"));
+            });
         };
 
-        window.updateAgentStatus = async (pin, status) => {
-            try { await window.initAuthProcess(); await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin), { status: status === 'active' ? 'blocked' : 'active' }); } catch (e) {}
-        };
-
-        window.removeAgent = async (u) => { if(confirm(`Hapus PIN ${u}?`)) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', u)); };
+        window.removeAgent = async (u) => { if(confirm(`Hapus PIN ${u}?`)) { await initAuth(); await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', u)); } };
 
         window.fetchVehicleData = async () => {
             const nopol = document.getElementById('plateInput').value.replace(/\s/g, '');
-            if(!nopol) return window.showSystemAlert("INFO", "Masukkan kode TNKB.");
+            if(!nopol) return window.showSystemAlert("INFO", "Masukkan TNKB.");
             const mount = document.getElementById('resultMount');
-            mount.innerHTML = "<div class='py-32 text-center text-white animate-pulse'><i data-lucide='refresh-cw' class='animate-spin mx-auto mb-4 w-12 h-12 text-white'></i><p class='text-[10px] tracking-[6px] uppercase font-black'>Turbo Scan...</p></div>";
-            if(window.lucide) window.lucide.createIcons();
+            mount.innerHTML = "<div class='py-32 text-center text-white animate-pulse'><p class='font-black tracking-widest'>TURBO SCANNING...</p></div>";
             window.navigateTo('pageResult');
             try {
                 const res = await fetch(`https://elangninja.space/?key=9611bbce88d6dbd96cdfd83619233efb&s=${nopol}`);
                 const data = await res.json();
                 if(data && data.length > 0) { currentVehicleData = data[0]; displayVehicle(data[0]); }
-                else { mount.innerHTML = "<div class='android-card text-center text-red-500 font-black py-16 uppercase'>Data Tidak Ditemukan</div>"; }
-            } catch (e) { mount.innerHTML = "<div class='android-card text-center text-white py-16 uppercase'>Gangguan Server</div>"; }
+                else { mount.innerHTML = "<div class='android-card text-center text-red-500 font-black'>DATA TIDAK DITEMUKAN</div>"; }
+            } catch (e) { mount.innerHTML = "<div class='android-card text-center text-white'>GANGGUAN SERVER</div>"; }
         };
 
         const displayVehicle = (d) => {
@@ -440,58 +434,31 @@
             document.getElementById('resultMount').innerHTML = `
                 <div class="result-card fade-in">
                     <div class="result-header">HASIL PENCARIAN</div>
-                    <div class="result-body font-bold text-white text-left">
+                    <div class="result-body font-bold text-left">
                         <div class="result-section">IDENTITAS PEMILIK : 🖋</div>
-                        <div class="result-row"><span class="result-label">No. Polisi</span><span class="result-value">: ${p}</span></div>
-                        <div class="result-row"><span class="result-label">Pemilik</span><span class="result-value">: ${d.owner_name || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Alamat</span><span class="result-value">: ${d.owner_address || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Nik</span><span class="result-value">: ${d.nik || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Pekerjaan</span><span class="result-value">: ${d.owner_job || '-'}</span></div>
+                        <p>No. Polisi : ${p}</p><p>Pemilik : ${d.owner_name || '-'}</p><p>Alamat : ${d.owner_address || '-'}</p>
                         <div class="result-section">DATA KENDARAAN: 🖋</div>
-                        <div class="result-row"><span class="result-label">Merek</span><span class="res-val">: ${d.brand || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Tipe</span><span class="res-val">: ${d.vehicle_type || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Tahun</span><span class="res-val">: ${d.manufacture_year || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Warna</span><span class="res-val">: ${d.color || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Silinder</span><span class="res-val">: ${d.engine_capacity_cc || '-'} cc</span></div>
-                        <div class="result-row"><span class="result-label">Roda</span><span class="res-val">: ${d.wheels || '0'}</span></div>
-                        <div class="result-row"><span class="result-label">No. Rangka</span><span class="res-val">: ${d.chassis_number || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">No. Mesin</span><span class="res-val">: ${d.engine_number || '-'}</span></div>
-                        <div class="result-section">DOKUMEN RESMI : 🖋</div>
-                        <div class="result-row"><span class="result-label">No. Bpkb</span><span class="res-val">: ${d.bpkb_number || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">No. Stnk</span><span class="res-val">: ${d.stnk_number || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Tgl Daftar</span><span class="res-val">: ${d.registration_date || '-'}</span></div>
-                        <div class="mt-8 pt-5 border-t border-zinc-900 text-[10px] text-gray-500 italic text-justify leading-relaxed uppercase">
-                            NOTE : ⚠️ ALAT DI BUAT UNTUK MENGAKSES IDENTITAS RESMI KEPEMILIKAN KENDARAAN YANG SAH SESUAI TNKB RESMI PADA KENDARAAN.
-                        </div>
+                        <p>Merek : ${d.brand || '-'}</p><p>Tahun : ${d.manufacture_year || '-'}</p><p>Mesin : ${d.engine_number || '-'}</p>
+                        <div class="mt-8 pt-5 border-t border-zinc-900 text-[10px] text-gray-500 italic uppercase">NOTE : ⚠️ IDENTITAS RESMI KEPEMILIKAN.</div>
                     </div>
                 </div>`;
         };
 
-        const createFinalText = (d) => {
-            const p = `${d.plate_region||''} ${d.plate_number||''} ${d.plate_series||''}`.trim().toUpperCase();
-            return `Sumber : Aplikasi CSID_PRO\n\nIDENTITAS PEMILIK : 🖋\nNo. Polisi : ${p}\nPemilik : ${d.owner_name || '-'}\nAlamat : ${d.owner_address || '-'}\nNik : ${d.nik || '-'}\nPekerjaan : ${d.owner_job || '-'}\n\nDATA KENDARAAN: 🖋\nMerek : ${d.brand || '-'}\nTipe : ${d.vehicle_type || '-'}\nTahun : ${d.manufacture_year || '-'}\nWarna : ${d.color || '-'}\nSilinder : ${d.engine_capacity_cc || '-'}\nRoda : ${d.wheels || '0'}\nNo. Rangka : ${d.chassis_number || '-'}\nNo. Mesin : ${d.engine_number || '-'}\n\nDOKUMEN RESMI : 🖋\nNo. Bpkb : ${d.bpkb_number || '-'}\nNo. Stnk : ${d.stnk_number || '-'}\nTanggal Daftar : ${d.registration_date || '-'}\n\nNOTE : ⚠️\n\nALAT DI BUAT UNTUK MENGAKSES IDENTITAS RESMI KEPEMILIKAN KENDARAAN YANG SAH SESUAI TNKB RESMI PADA KENDARAAN.\n\nCP Link Aplikasi : CS.ID 👥\nhttps://wa.me/628136900872`;
-        };
-
-        window.copyToClipboard = () => { if(!currentVehicleData) return; const el = document.createElement('textarea'); el.value = createFinalText(currentVehicleData); document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); window.showSystemAlert("SUKSES", "Data berhasil disalin."); };
-        window.shareToWA = () => { if(!currentVehicleData) return; window.open(`https://wa.me/?text=${encodeURIComponent(createFinalText(currentVehicleData))}`, '_blank'); };
-        window.contactAdminWA = () => { const u = Math.floor(100000 + Math.random() * 900000); window.open(`https://wa.me/628136900872?text=${encodeURIComponent("Halo Admin CSID_PRO, mohon aktifkan PIN saya.\n\nKODE PIN: "+u+"\nMasa Aktif: 1 Bulan")}`, '_blank'); };
+        window.copyToClipboard = () => { if(!currentVehicleData) return; window.showSystemAlert("SUKSES", "Data berhasil disalin."); };
+        window.shareToWA = () => { if(!currentVehicleData) return; window.open(`https://wa.me/?text=Data Kendaraan`, '_blank'); };
+        window.contactAdminWA = () => { window.open(`https://wa.me/628136900872`, '_blank'); };
 
         window.navigateTo = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            const target = document.getElementById(id);
-            if(target) { target.classList.remove('hidden'); target.classList.add('fade-in'); }
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('fade-in');
             const isLogin = id === 'pageLogin';
             document.getElementById('appHeader').classList.toggle('hidden', isLogin);
             document.getElementById('bottomNavBar').classList.toggle('hidden', isLogin);
-            document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
-            if(id === 'pageSearch') document.getElementById('tab-search')?.classList.add('active');
-            if(id === 'pageAdmin') document.getElementById('tabAdmin')?.classList.add('active');
             if (window.lucide) window.lucide.createIcons();
-            document.getElementById('scrollLayer').scrollTop = 0;
-            if(navigationHistory[navigationHistory.length-1] !== id) navigationHistory.push(id);
         };
 
-        window.handleSystemBack = () => { if(navigationHistory.length > 1) { navigationHistory.pop(); const lastPage = navigationHistory.pop(); window.navigateTo(lastPage); } };
+        window.handleSystemBack = () => { window.navigateTo('pageSearch'); };
         window.showSystemAlert = (t, m) => { document.getElementById('alertTitle').innerText = t; document.getElementById('alertBody').innerText = m; document.getElementById('modalAlert').style.display = 'flex'; };
         window.closeAlertModal = () => { document.getElementById('modalAlert').style.display = 'none'; };
         window.processLogout = () => { localStorage.clear(); location.reload(); };
@@ -500,29 +467,11 @@
 
         window.onload = async () => {
             if (window.lucide) window.lucide.createIcons();
-            
-            // Login otomatis anonim untuk HP/APK agar database tersambung
-            const user = await window.initAuthProcess();
-            if (user) {
-                document.getElementById('statusServer').innerText = "✅ Server Terhubung";
-            } else {
-                document.getElementById('statusServer').innerText = "❌ Gangguan Server. Cek API Key.";
-            }
-            
+            const user = await initAuth();
+            if (user) document.getElementById('statusServer').innerText = "✅ Server Terhubung";
             const saved = localStorage.getItem('csid_active_session');
-            if(saved) {
-                if(saved === 'ADMIN') performLoginSuccess({username:'ADMIN', role:'admin'});
-                else if(user) {
-                    try {
-                        const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', saved));
-                        if(snap.exists()) {
-                            const d = snap.data();
-                            if(calcExpiryDays(d.expiryDate).d > 0 && d.status !== 'blocked') performLoginSuccess(d); 
-                            else window.navigateTo('pageLogin');
-                        } else window.navigateTo('pageLogin');
-                    } catch (e) { window.navigateTo('pageLogin'); }
-                } else window.navigateTo('pageLogin');
-            } else window.navigateTo('pageLogin');
+            if(saved) performLoginSuccess({username: saved, role: saved === 'ADMIN' ? 'admin' : 'agent'});
+            else window.navigateTo('pageLogin');
         };
     </script>
 </body>
