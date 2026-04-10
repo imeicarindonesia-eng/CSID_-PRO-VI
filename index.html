@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CSID_PRO - Official Mobile</title>
     
-    <!-- Meta PWA & Mobile Optimization -->
+    <!-- Meta Tags PWA & Mobile Optimization -->
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -158,7 +158,7 @@
 <body>
 
     <div class="android-wrapper">
-        <!-- STATUS BAR DIHAPUS (HILANGKAN JAM, BATERAI, SINYAL) AGAR BERSIH -->
+        <!-- STATUS BAR DIHAPUS AGAR BERSIH -->
 
         <div class="app-main" id="scrollLayer">
             <!-- HEADER -->
@@ -173,7 +173,7 @@
                 </div>
             </div>
 
-            <!-- LOGIN PAGE -->
+            <!-- LOGIN VIEW -->
             <div id="pageLogin" class="page flex-1 flex flex-col justify-center">
                 <div class="text-center mb-10">
                     <h1 class="text-5xl font-black text-white italic tracking-tighter uppercase">CSID_PRO</h1>
@@ -192,7 +192,7 @@
                         <button class="btn-android btn-ghost text-green-500 !bg-green-500/5 !border-none" onclick="window.contactAdminWA()">HUBUNGI ADMIN CS.ID</button>
                     </div>
                 </div>
-                <p id="statusServer" class="text-[10px] text-center text-gray-500 font-bold mt-5 px-10 leading-relaxed"></p>
+                <p id="statusServer" class="text-[10px] text-center text-gray-500 font-bold mt-5 px-10 leading-relaxed">Mengecek Koneksi...</p>
             </div>
 
             <!-- SEARCH PAGE -->
@@ -240,6 +240,7 @@
             <div class="nav-btn-circle"><i data-lucide="square" color="#888" size="16" stroke-width="3"></i></div>
         </div>
 
+        <!-- MODAL -->
         <div id="modalAlert" class="modal-overlay">
             <div class="modal-card">
                 <h3 id="alertTitle" class="font-black text-white mb-3 uppercase text-sm">Sistem</h3>
@@ -269,10 +270,10 @@
         import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =================================================================
-        // 🔥 AUTO-CONFIG BERDASARKAN PROYEK BOS (csid-pro-80860)
+        // 🔥 AUTO-CONFIG FIX (DIISI OTOMATIS DARI SCREENSHOT PROYEK BOS)
         // =================================================================
         const MY_FIREBASE_PROJECT = {
-            apiKey: "AIzaSyC2V" + "kM6y8qB8fP-X6_Y2o0bJq_8G6G8G8G", // Hardcoded
+            apiKey: "AIzaSyC2VkM6y8qB8fP-X6_Y2o0bJq_8G6G8G8G", 
             authDomain: "csid-pro-80860.firebaseapp.com",
             projectId: "csid-pro-80860",
             storageBucket: "csid-pro-80860.appspot.com",
@@ -287,23 +288,22 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const APP_ID = (typeof __app_id !== 'undefined') ? __app_id : "CSID_PRO_APP_ULTIMATE_V3";
+        const APP_ID = (typeof __app_id !== 'undefined') ? __app_id : "CSID_PRO_APP_ULTIMATE_V4";
 
         let currentVehicleData = null;
         let navigationHistory = ['pageLogin'];
 
-        // --- AUTH GATEWAY (PENTING AGAR APK NORMAL) ---
+        // --- SISTEM AUTH APK (WAJIB AGAR BISA AKSES DATABASE) ---
         window.initAuthProcess = async () => {
-            if (auth.currentUser) return auth.currentUser;
             try {
+                if (auth.currentUser) return auth.currentUser;
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
+                    return await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    await signInAnonymously(auth);
+                    return await signInAnonymously(auth);
                 }
-                return auth.currentUser;
             } catch (e) { 
-                console.error("Auth System Error", e);
+                console.error("Auth Error", e);
                 return null; 
             }
         };
@@ -333,19 +333,20 @@
             const pin = document.getElementById('loginPinField').value.trim();
             if(!pin) return window.showSystemAlert("INFO", "Masukkan Kode PIN Akses.");
             const btn = document.getElementById('btnLoginSubmit');
-            btn.disabled = true; btn.innerText = "MENYAMBUNGKAN...";
+            btn.disabled = true; btn.innerText = "MENGHUBUNGKAN...";
             try {
                 if(pin === "280189") { performLoginSuccess({username:"ADMIN", role:"admin"}); return; }
-                const user = await window.initAuthProcess();
-                if(!user) throw new Error("Auth Fail");
+                const authUser = await window.initAuthProcess();
+                if(!authUser) throw new Error("Auth Gagal");
+                
                 const snap = await getDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin));
                 if(snap.exists()) {
                     const data = snap.data();
-                    if(data.status === 'blocked') return window.showSystemAlert("DIBLOKIR", "PIN ini dinonaktifkan Admin.");
+                    if(data.status === 'blocked') return window.showSystemAlert("DIBLOKIR", "PIN Anda dinonaktifkan Admin.");
                     if(calcExpiryDays(data.expiryDate).d <= 0 && data.role !== 'admin') return window.showSystemAlert("EXPIRED", "Masa aktif PIN habis.");
                     performLoginSuccess(data);
                 } else { window.showSystemAlert("GAGAL", "PIN tidak terdaftar."); }
-            } catch (e) { window.showSystemAlert("ERROR", "Gagal memverifikasi database server."); }
+            } catch (e) { window.showSystemAlert("ERROR", "Gagal memverifikasi. Cek internet."); }
             finally { btn.disabled = false; btn.innerText = "MASUK KE SISTEM"; }
         };
 
@@ -364,15 +365,16 @@
             window.navigateTo('pageSearch');
         };
 
-        // --- FIX REGISTRASI PIN BARU (MEMPERBAIKI ERROR TYPEERROR) ---
+        // --- FIX REGISTRASI PIN BARU (SISTEM PENERIMAAN DATABASE) ---
         window.submitNewPin = async () => {
             const pin = document.getElementById('newPinInput').value.trim();
             const btn = document.getElementById('btnRegSubmit');
             if(!pin || pin.length < 4) return window.showSystemAlert("INFO", "PIN minimal 4-6 digit.");
             if (btn) { btn.disabled = true; btn.innerText = "PROSES..."; }
             try {
-                const user = await window.initAuthProcess();
-                if(!user) return;
+                const authUser = await window.initAuthProcess();
+                if(!authUser) throw new Error("Belum Login");
+                
                 let expiry = new Date(); expiry.setDate(expiry.getDate() + 30);
                 await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin), {
                     username: pin, role: 'agent', expiryDate: expiry.toISOString(), status: 'active'
@@ -380,13 +382,16 @@
                 window.closeRegisterModal(); 
                 window.showSystemAlert("BERHASIL", `PIN ${pin} aktif 30 hari.`);
                 document.getElementById('newPinInput').value = "";
-            } catch (e) { window.showSystemAlert("GAGAL", "Gagal menyimpan PIN ke database."); }
+            } catch (e) { 
+                console.error(e);
+                window.showSystemAlert("GAGAL", "Gagal menyimpan PIN. Cek Rule Firestore bos."); 
+            }
             finally { if (btn) { btn.disabled = false; btn.innerText = "AKTIFKAN"; } }
         };
 
         window.loadAdminData = async () => {
-            const user = await window.initAuthProcess();
-            if (!user) return;
+            const authUser = await window.initAuthProcess();
+            if (!authUser) return;
             onSnapshot(collection(db, 'artifacts', APP_ID, 'public', 'data', 'agents'), (snap) => {
                 const list = document.getElementById('agentsListMount');
                 if(!list) return;
@@ -406,14 +411,14 @@
                         </div>
                     </div>`;
                 });
-            }, (err) => console.log("Database connection error"));
+            }, (err) => console.log("Firestore Error"));
         };
 
         window.updateAgentStatus = async (pin, status) => {
             try { await window.initAuthProcess(); await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', pin), { status: status === 'active' ? 'blocked' : 'active' }); } catch (e) {}
         };
 
-        window.removeAgent = async (u) => { if(confirm(`Hapus permanen PIN ${u}?`)) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', u)); };
+        window.removeAgent = async (u) => { if(confirm(`Hapus PIN ${u}?`)) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'agents', u)); };
 
         window.fetchVehicleData = async () => {
             const nopol = document.getElementById('plateInput').value.replace(/\s/g, '');
@@ -454,7 +459,7 @@
                         <div class="result-section">DOKUMEN RESMI : 🖋</div>
                         <div class="result-row"><span class="result-label">No. Bpkb</span><span class="res-val">: ${d.bpkb_number || '-'}</span></div>
                         <div class="result-row"><span class="result-label">No. Stnk</span><span class="res-val">: ${d.stnk_number || '-'}</span></div>
-                        <div class="result-row"><span class="result-label">Tanggal Daftar</span><span class="res-val">: ${d.registration_date || '-'}</span></div>
+                        <div class="result-row"><span class="result-label">Tgl Daftar</span><span class="res-val">: ${d.registration_date || '-'}</span></div>
                         <div class="mt-8 pt-5 border-t border-zinc-900 text-[10px] text-gray-500 italic text-justify leading-relaxed uppercase">
                             NOTE : ⚠️ ALAT DI BUAT UNTUK MENGAKSES IDENTITAS RESMI KEPEMILIKAN KENDARAAN YANG SAH SESUAI TNKB RESMI PADA KENDARAAN.
                         </div>
